@@ -1,0 +1,22 @@
+# 環境変数（APIキーが含まれるため絶対にコミットしない）
+.env
+
+# Python 仮想環境
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Node.js
+node_modules/
+dist/
+.vite/
+
+# macOS
+.DS_Store
+
+# エディタ
+.vscode/
+.idea/

@@ -1,5 +1,5 @@
 # --- ビルドステージ ---
-FROM node:20-alpine AS builder
+FROM --platform=linux/amd64 node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY . .
 RUN npm run build
 
 # --- 本番ステージ ---
-FROM nginx:alpine
+FROM --platform=linux/amd64 nginx:alpine
 
 # ビルド成果物をnginxに配置
 COPY --from=builder /app/dist /usr/share/nginx/html

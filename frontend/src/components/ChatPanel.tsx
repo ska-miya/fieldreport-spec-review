@@ -1,36 +1,74 @@
 /**
- * ChatPanel.jsx
+ * ChatPanel.tsx
  * 右メインエリア：チャット形式で仕様書について質問・レビュー依頼ができる。
  */
 
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { Components } from "react-markdown";
+import type { Message, ChatResponse } from "../types";
 
-// よく使う質問のサジェスト
-const SUGGESTIONS = [
+interface ChatPanelProps {
+  apiBase: string;
+}
+
+const SUGGESTIONS: string[] = [
   "仕様書の中に矛盾はありますか？",
   "SCR-003（完了確認画面）の仕様を教えてください",
   "オフライン時の動作はどの画面でどう定義されていますか？",
   "必須入力項目の一覧を教えてください",
 ];
 
-export default function ChatPanel({ apiBase }) {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const bottomRef = useRef(null);
+// react-markdown v9 向けコンポーネント定義
+const markdownComponents: Components = {
+  h2: ({ children }) => <h2 style={mdStyles.h2}>{children}</h2>,
+  h3: ({ children }) => <h3 style={mdStyles.h3}>{children}</h3>,
+  p: ({ children }) => <p style={mdStyles.p}>{children}</p>,
+  ul: ({ children }) => <ul style={mdStyles.ul}>{children}</ul>,
+  ol: ({ children }) => <ol style={mdStyles.ol}>{children}</ol>,
+  li: ({ children }) => <li style={mdStyles.li}>{children}</li>,
+  strong: ({ children }) => <strong style={mdStyles.strong}>{children}</strong>,
+  hr: () => <hr style={mdStyles.hr} />,
+  table: ({ children }) => (
+    <div style={mdStyles.tableWrapper}>
+      <table style={mdStyles.table}>{children}</table>
+    </div>
+  ),
+  th: ({ children }) => <th style={mdStyles.th}>{children}</th>,
+  td: ({ children }) => <td style={mdStyles.td}>{children}</td>,
+  // react-markdown v9: className でコードブロックか判定
+  code: ({ className, children }) => {
+    const isBlock = Boolean(className?.startsWith("language-"));
+    return isBlock ? (
+      <pre style={mdStyles.codeBlock}>
+        <code className={className}>{children}</code>
+      </pre>
+    ) : (
+      <code style={mdStyles.inlineCode}>{children}</code>
+    );
+  },
+};
+
+export default function ChatPanel({ apiBase }: ChatPanelProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async (text) => {
+  const sendMessage = async (text: string): Promise<void> => {
     const userMessage = text.trim();
     if (!userMessage || loading) return;
 
-    const newMessages = [...messages, { role: "user", content: userMessage }];
+    const newMessages: Message[] = [
+      ...messages,
+      { role: "user", content: userMessage },
+    ];
     setMessages(newMessages);
     setInput("");
     setLoading(true);
@@ -45,19 +83,19 @@ export default function ChatPanel({ apiBase }) {
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail || "サーバーエラーが発生しました");
+        throw new Error((err as { detail?: string }).detail ?? "サーバーエラーが発生しました");
       }
 
-      const data = await res.json();
+      const data: ChatResponse = await res.json();
       setMessages([...newMessages, { role: "assistant", content: data.reply }]);
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : "不明なエラーが発生しました");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage(input);
@@ -92,29 +130,7 @@ export default function ChatPanel({ apiBase }) {
                 <div style={styles.markdownBody}>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
-                    components={{
-                      h2: ({ children }) => <h2 style={mdStyles.h2}>{children}</h2>,
-                      h3: ({ children }) => <h3 style={mdStyles.h3}>{children}</h3>,
-                      p:  ({ children }) => <p  style={mdStyles.p}>{children}</p>,
-                      ul: ({ children }) => <ul style={mdStyles.ul}>{children}</ul>,
-                      ol: ({ children }) => <ol style={mdStyles.ol}>{children}</ol>,
-                      li: ({ children }) => <li style={mdStyles.li}>{children}</li>,
-                      strong: ({ children }) => <strong style={mdStyles.strong}>{children}</strong>,
-                      hr: () => <hr style={mdStyles.hr} />,
-                      table: ({ children }) => (
-                        <div style={mdStyles.tableWrapper}>
-                          <table style={mdStyles.table}>{children}</table>
-                        </div>
-                      ),
-                      th: ({ children }) => <th style={mdStyles.th}>{children}</th>,
-                      td: ({ children }) => <td style={mdStyles.td}>{children}</td>,
-                      code: ({ inline, children }) =>
-                        inline ? (
-                          <code style={mdStyles.inlineCode}>{children}</code>
-                        ) : (
-                          <pre style={mdStyles.codeBlock}><code>{children}</code></pre>
-                        ),
-                    }}
+                    components={markdownComponents}
                   >
                     {msg.content}
                   </ReactMarkdown>
@@ -132,9 +148,7 @@ export default function ChatPanel({ apiBase }) {
           </div>
         )}
 
-        {error && (
-          <div style={styles.errorRow}>⚠ {error}</div>
-        )}
+        {error && <div style={styles.errorRow}>⚠ {error}</div>}
 
         <div ref={bottomRef} />
       </div>
@@ -161,8 +175,7 @@ export default function ChatPanel({ apiBase }) {
   );
 }
 
-// レイアウト用スタイル
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
   container: { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" },
   messageArea: { flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: "16px" },
   welcome: { textAlign: "center", padding: "40px 24px", color: "#666" },
@@ -179,22 +192,21 @@ const styles = {
   loadingDots: { fontSize: "14px", color: "#888" },
   errorRow: { background: "#fee2e2", color: "#b91c1c", padding: "10px 16px", borderRadius: "8px", fontSize: "13px" },
   inputArea: { borderTop: "1px solid #cbd5e1", padding: "16px 24px", background: "#fff", display: "flex", gap: "12px", alignItems: "flex-end" },
-  textarea: { flex: 1, border: "1px solid #cbd5e1", borderRadius: "8px", padding: "10px 14px", fontSize: "14px", resize: "none", lineHeight: 1.6, fontFamily: "inherit", outline: "none" },
+  textarea: { flex: 1, border: "1px solid #cbd5e1", borderRadius: "8px", padding: "10px 14px", fontSize: "14px", resize: "none", lineHeight: 1.6, fontFamily: "inherit" },
   sendBtn: { background: "#1e4d8c", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 24px", fontSize: "14px", fontWeight: 700, cursor: "pointer", flexShrink: 0 },
 };
 
-// Markdown要素ごとのスタイル
-const mdStyles = {
+const mdStyles: Record<string, React.CSSProperties> = {
   h2: { fontSize: "16px", fontWeight: 700, color: "#1e4d8c", margin: "16px 0 8px", paddingBottom: "4px", borderBottom: "2px solid #d6e4f7" },
   h3: { fontSize: "14px", fontWeight: 700, color: "#2c5f9e", margin: "12px 0 6px" },
-  p:  { margin: "6px 0", lineHeight: 1.7 },
+  p: { margin: "6px 0", lineHeight: 1.7 },
   ul: { paddingLeft: "20px", margin: "6px 0" },
   ol: { paddingLeft: "20px", margin: "6px 0" },
   li: { marginBottom: "4px", lineHeight: 1.7 },
   strong: { fontWeight: 700, color: "#1a1a2e" },
   hr: { border: "none", borderTop: "1px solid #e2e8f0", margin: "12px 0" },
   tableWrapper: { overflowX: "auto", margin: "8px 0" },
-  table: { borderCollapse: "collapse", width: "100%", fontSize: "13px" },
+  table: { borderCollapse: "collapse", width: "100%" },
   th: { background: "#1e4d8c", color: "#fff", padding: "7px 12px", textAlign: "left", fontWeight: 600 },
   td: { padding: "7px 12px", borderBottom: "1px solid #e2e8f0", verticalAlign: "top" },
   inlineCode: { background: "#f1f5f9", padding: "1px 5px", borderRadius: "4px", fontSize: "13px", fontFamily: "monospace" },

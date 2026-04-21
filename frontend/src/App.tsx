@@ -1,19 +1,23 @@
 import { useState, useEffect } from "react";
-import ChatPanel from "./components/ChatPanel.jsx";
-import SpecList from "./components/SpecList.jsx";
+import ChatPanel from "./components/ChatPanel";
+import SpecList from "./components/SpecList";
+import type { SpecsResponse } from "./types";
 
 const API_BASE = "http://localhost:8000";
 
 export default function App() {
-  const [specFiles, setSpecFiles] = useState([]);
-  const [loadError, setLoadError] = useState(null);
+  const [specFiles, setSpecFiles] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // 起動時に読み込み済み仕様書の一覧を取得
   useEffect(() => {
     fetch(`${API_BASE}/api/specs`)
       .then((res) => res.json())
-      .then((data) => setSpecFiles(data.files))
-      .catch(() => setLoadError("バックエンドに接続できません。サーバーが起動しているか確認してください。"));
+      .then((data: SpecsResponse) => setSpecFiles(data.files))
+      .catch(() =>
+        setLoadError(
+          "バックエンドに接続できません。サーバーが起動しているか確認してください。"
+        )
+      );
   }, []);
 
   return (
@@ -37,17 +41,14 @@ export default function App() {
 
       {/* メインコンテンツ */}
       <div style={styles.main}>
-        {/* 左：仕様書ファイル一覧 */}
         <SpecList files={specFiles} />
-
-        {/* 右：チャットパネル */}
         <ChatPanel apiBase={API_BASE} />
       </div>
     </div>
   );
 }
 
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
   header: {
     background: "#1e4d8c",
     color: "#fff",
@@ -58,20 +59,9 @@ const styles = {
     borderBottom: "4px solid #e85d04",
     flexShrink: 0,
   },
-  headerTitle: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  logo: {
-    fontWeight: 700,
-    fontSize: "18px",
-    letterSpacing: "0.05em",
-  },
-  subtitle: {
-    fontSize: "14px",
-    opacity: 0.8,
-  },
+  headerTitle: { display: "flex", alignItems: "center", gap: "12px" },
+  logo: { fontWeight: 700, fontSize: "18px", letterSpacing: "0.05em" },
+  subtitle: { fontSize: "14px", opacity: 0.8 },
   headerRight: {},
   specBadge: {
     background: "rgba(255,255,255,0.15)",
@@ -85,9 +75,5 @@ const styles = {
     borderRadius: "99px",
     fontSize: "12px",
   },
-  main: {
-    display: "flex",
-    flex: 1,
-    overflow: "hidden",
-  },
+  main: { display: "flex", flex: 1, overflow: "hidden" },
 };

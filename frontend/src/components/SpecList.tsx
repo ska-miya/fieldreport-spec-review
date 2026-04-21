@@ -1,15 +1,19 @@
 /**
- * SpecList.jsx
+ * SpecList.tsx
  * 左サイドバー：読み込み済み仕様書ファイルの一覧を表示する。
  */
 
-export default function SpecList({ files }) {
-  const fileIcon = (name) => {
-    if (name.endsWith(".docx")) return "📝";
-    if (name.endsWith(".html") || name.endsWith(".htm")) return "🌐";
-    return "📄";
-  };
+interface SpecListProps {
+  files: string[];
+}
 
+const fileIcon = (name: string): string => {
+  if (name.endsWith(".docx")) return "📝";
+  if (name.endsWith(".html") || name.endsWith(".htm")) return "🌐";
+  return "📄";
+};
+
+export default function SpecList({ files }: SpecListProps) {
   return (
     <aside style={styles.sidebar}>
       <div style={styles.sidebarTitle}>読み込み済み仕様書</div>
@@ -28,14 +32,15 @@ export default function SpecList({ files }) {
       )}
 
       <div style={styles.hint}>
-        💡 <code>specs/</code> フォルダにファイルを追加すると<br />
+        💡 <code>specs/</code> フォルダにファイルを追加すると
+        <br />
         サーバー再起動時に自動で読み込まれます
       </div>
     </aside>
   );
 }
 
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
   sidebar: {
     width: "260px",
     flexShrink: 0,
@@ -56,16 +61,8 @@ const styles = {
     borderBottom: "2px solid #d6e4f7",
     paddingBottom: "8px",
   },
-  empty: {
-    color: "#999",
-    fontSize: "13px",
-  },
-  list: {
-    listStyle: "none",
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-  },
+  empty: { color: "#999", fontSize: "13px" },
+  list: { listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" },
   item: {
     display: "flex",
     alignItems: "flex-start",
@@ -76,13 +73,8 @@ const styles = {
     fontSize: "13px",
     lineHeight: 1.5,
   },
-  icon: {
-    flexShrink: 0,
-  },
-  fileName: {
-    wordBreak: "break-all",
-    color: "#1a1a2e",
-  },
+  icon: { flexShrink: 0 },
+  fileName: { wordBreak: "break-all", color: "#1a1a2e" },
   hint: {
     marginTop: "auto",
     fontSize: "11px",

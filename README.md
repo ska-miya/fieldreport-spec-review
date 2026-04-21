@@ -1,6 +1,6 @@
 # FieldReport 仕様書レビューシステム
 
-> 工場向けアプリ「FieldReport」の仕様書を AI（Claude）を使って精査する Web アプリケーション
+> 複数の仕様書を AI（Claude）でチャット形式にレビューする Web アプリケーション
 
 ![スクリーンショット](docs/screenshot.png)
 
@@ -8,16 +8,18 @@
 
 ## 概要
 
-複数の仕様書ドキュメント（機能仕様書・画面仕様書・画面遷移仕様書）をアップロードするだけで、チャット形式で以下の操作が可能になります。
+機能仕様書・画面仕様書・画面遷移仕様書をアップロードするだけで、以下の操作がチャット形式で可能になります。
 
 - **矛盾チェック**：仕様書間の記述の食い違いを自動検出・優先度付きで報告
 - **内容の質問応答**：「SCR-003 の仕様を教えて」などの自然言語での問い合わせ
 - **不明点の指摘**：曖昧な定義・未定義の仕様箇所の洗い出し
 
-実際の検出例として、本リポジトリ内のサンプル仕様書からは以下の矛盾が検出されました。
+### 実際の検出例（サンプル仕様書より）
 
-- **SCR-003 スクロール可否**：画面仕様書「縦スクロール可」⇔ 画面遷移仕様書「スクロール非対応」
-- **バックキーのダイアログ表示条件**：画面仕様書「変更がある場合」⇔ 画面遷移仕様書「必ず表示」
+| # | 箇所 | 種別 | 優先度 |
+|---|------|------|--------|
+| ① | SCR-003 スクロール可否 | 明確な矛盾 | 🔴 高 |
+| ② | バックキー時ダイアログ文言 | 記載の不統一 | 🟡 中 |
 
 ---
 
@@ -25,10 +27,11 @@
 
 | レイヤー | 技術 |
 |---|---|
-| フロントエンド | React 18 / Vite |
-| バックエンド | Python 3 / FastAPI |
+| フロントエンド | React 18 / TypeScript / Vite |
+| バックエンド | Python 3.12 / FastAPI |
 | AI | Claude API（Anthropic） |
 | 仕様書パース | python-docx / BeautifulSoup4 |
+| インフラ | Docker / docker-compose / nginx |
 
 ---
 
@@ -58,43 +61,62 @@
 
 ### 前提条件
 
-- Python 3.10 以上
-- Node.js 18 以上
 - Anthropic API キー（[取得はこちら](https://console.anthropic.com/)）
+- Docker & docker-compose（推奨）または Python 3.10+ / Node.js 18+
 
-### 1. リポジトリをクローン
+---
+
+### 方法 A：Docker で起動（推奨）
 
 ```bash
-git clone https://github.com/<your-username>/fieldreport-spec-review.git
+git clone https://github.com/ska-miya/fieldreport-spec-review.git
+cd fieldreport-spec-review
+
+# 仕様書を配置
+cp your-spec.docx specs/
+
+# 環境変数を設定
+cp .env.example backend/.env
+# backend/.env を開いて ANTHROPIC_API_KEY を設定
+
+# 起動（初回はビルドに数分かかります）
+docker compose up --build
+```
+
+ブラウザで `http://localhost:5173` を開く。
+
+---
+
+### 方法 B：ローカルで起動
+
+#### 1. リポジトリをクローン
+
+```bash
+git clone https://github.com/ska-miya/fieldreport-spec-review.git
 cd fieldreport-spec-review
 ```
 
-### 2. 仕様書を配置
+#### 2. 仕様書を配置
 
 ```bash
-# specs/ フォルダに .docx または .html ファイルを置く
 cp your-spec.docx specs/
 ```
 
-### 3. バックエンドをセットアップ
+#### 3. バックエンドをセットアップ
 
 ```bash
 cd backend
-python3 -m venv venv
-source venv/bin/activate       # Windows: venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 環境変数を設定
 cp .env.example .env
 # .env を開いて ANTHROPIC_API_KEY を設定
 
-# サーバー起動
-python -m uvicorn main:app --reload
+uvicorn main:app --reload
 ```
 
-### 4. フロントエンドをセットアップ
-
-別ターミナルで：
+#### 4. フロントエンドをセットアップ（別ターミナル）
 
 ```bash
 cd frontend
@@ -110,20 +132,27 @@ npm run dev
 
 ```
 fieldreport-spec-review/
-├── specs/                   # 仕様書ファイル置き場（.docx / .html）
+├── specs/                        # 仕様書ファイル置き場（.docx / .html）
 ├── backend/
-│   ├── main.py              # FastAPI エンドポイント
-│   ├── spec_loader.py       # 仕様書パース・Claude プロンプト生成
+│   ├── main.py                   # FastAPI エンドポイント
+│   ├── spec_loader.py            # 仕様書パース・Claude プロンプト生成
 │   ├── requirements.txt
+│   ├── Dockerfile
 │   └── .env.example
 ├── frontend/
-│   └── src/
-│       ├── App.jsx
-│       └── components/
-│           ├── ChatPanel.jsx   # チャット UI（Markdown レンダリング対応）
-│           └── SpecList.jsx    # 仕様書ファイル一覧
+│   ├── src/
+│   │   ├── types.ts              # 共通型定義（Message / SpecsResponse 等）
+│   │   ├── App.tsx
+│   │   └── components/
+│   │       ├── ChatPanel.tsx     # チャット UI（Markdown レンダリング対応）
+│   │       └── SpecList.tsx      # 仕様書ファイル一覧
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── tsconfig.json
+│   └── vite.config.ts
+├── docker-compose.yml
 └── docs/
-    └── screenshot.png       # スクリーンショット
+    └── screenshot.png
 ```
 
 ---

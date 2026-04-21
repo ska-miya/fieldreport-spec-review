@@ -7,9 +7,12 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      # コンテナ内では /app/specs に直接マウントするため上書き
+      - SPECS_DIR=./specs
     volumes:
-      # specs フォルダをマウントして仕様書をコンテナ外で管理
-      - ./specs:/app/../specs
+      # 仕様書フォルダをコンテナ内の /app/specs にマウント
+      - ./specs:/app/specs
     restart: unless-stopped
 
   frontend:

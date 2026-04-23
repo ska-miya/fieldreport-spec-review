@@ -31,6 +31,7 @@
 | バックエンド | Python 3.12 / FastAPI |
 | AI | Claude API（Anthropic） |
 | 仕様書パース | python-docx / BeautifulSoup4 |
+| テスト | pytest / httpx |
 | インフラ | Docker / docker-compose / nginx |
 
 ---
@@ -138,7 +139,10 @@ fieldreport-spec-review/
 │   ├── spec_loader.py            # 仕様書パース・Claude プロンプト生成
 │   ├── requirements.txt
 │   ├── Dockerfile
-│   └── .env.example
+│   ├── .env.example
+│   └── tests/
+│       ├── test_main.py          # API エンドポイントテスト
+│       └── test_spec_loader.py   # 仕様書パーステスト
 ├── frontend/
 │   ├── src/
 │   │   ├── types.ts              # 共通型定義（Message / SpecsResponse 等）
@@ -167,6 +171,22 @@ fieldreport-spec-review/
 - `仕様書の中に矛盾はありますか？`
 - `SCR-002 の必須入力項目を一覧で教えてください`
 - `オフライン時の挙動はどの画面でどう定義されていますか？`
+
+---
+
+## テスト
+
+バックエンドのユニットテストを pytest で実行できます。
+
+```bash
+cd backend
+venv/bin/python -m pytest tests/ -v
+```
+
+| テストファイル | 対象 | テスト数 |
+|---|---|---|
+| `tests/test_spec_loader.py` | `load_docx` / `load_html` / `load_all_specs` / `build_system_prompt` | 24 |
+| `tests/test_main.py` | `GET /` / `GET /api/specs` / `POST /api/chat` | 12 |
 
 ---
 
